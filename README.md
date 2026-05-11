@@ -1,8 +1,8 @@
 # FridgeChef AI Food Suggestion
 
-FridgeChef AI is an Expo React Native prototype that helps users turn refrigerator contents into realistic meal ideas. Users can take or upload multiple fridge photos, review mock AI-detected ingredients with confidence labels, add or edit ingredients manually, and generate meal recommendations across Western, Chinese, and international cuisines.
+FridgeChef AI is an Expo React Native prototype that helps users turn refrigerator contents into realistic meal ideas. Users can take or upload multiple fridge photos, review AI-detected ingredients with confidence labels, add or edit ingredients manually, and generate meal recommendations across Western, Chinese, and international cuisines.
 
-The app is designed for Expo Go SDK 54 and currently runs without any API keys. AI behavior is implemented locally in `src/services/ai.ts` so the service layer can later be replaced with OpenAI Vision and text generation calls.
+The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refrigerator photo analysis falls back to the local mock detector in `src/services/ai.ts` so the rest of the app remains usable during development.
 
 ## Features
 
@@ -11,7 +11,8 @@ The app is designed for Expo Go SDK 54 and currently runs without any API keys. 
   - Upload refrigerator photos
   - Add food manually
 - Multiple photo selection through `expo-image-picker`.
-- Mock refrigerator image analysis with detected ingredients, quantities, and confidence labels.
+- OpenAI Vision-powered refrigerator image analysis when `EXPO_PUBLIC_OPENAI_API_KEY` is available.
+- Local mock refrigerator image analysis fallback when no API key is configured.
 - Editable ingredient confirmation step before meal generation.
 - Meal recommendations grouped into vegetables, meats, main food / staples, snacks, and drinks.
 - Per-meal cuisine, ingredients used, missing optional ingredients, estimated calories, macros, cooking time, and simple cooking steps.
@@ -20,13 +21,28 @@ The app is designed for Expo Go SDK 54 and currently runs without any API keys. 
 
 ## AI/API architecture
 
-The mock AI service exposes clearly named functions that are ready to be swapped for real API implementations:
+The AI service exposes clearly named functions for image recognition and meal planning:
 
-- `detectIngredientsFromImages(images)` — placeholder for OpenAI Vision-based fridge image recognition.
-- `recommendMealsFromIngredients(ingredients, language)` — placeholder for OpenAI text generation of localized meal ideas.
+- `detectIngredientsFromImages(images)` — sends selected image data to the OpenAI Responses API with a vision-capable model and requests structured ingredient JSON. Without an API key, it uses the local mock detector.
+- `recommendMealsFromIngredients(ingredients, language)` — local rule-based meal ideas that can later be replaced or augmented with OpenAI text generation.
 - `estimateNutrition(meal)` — placeholder for more precise nutrition estimation.
 
-Integration comments in `src/services/ai.ts` identify where to connect OpenAI Vision and text generation requests later.
+### OpenAI setup
+
+Set your OpenAI key in your local shell before starting Expo:
+
+```sh
+export EXPO_PUBLIC_OPENAI_API_KEY="your_openai_api_key"
+npm start
+```
+
+Optionally override the vision model:
+
+```sh
+export EXPO_PUBLIC_OPENAI_VISION_MODEL="gpt-4.1-mini"
+```
+
+> Security note: `EXPO_PUBLIC_` variables are bundled into client-side Expo apps. This is acceptable only for local prototypes. For production, proxy OpenAI requests through your own backend and keep the API key server-side.
 
 ## Run locally
 
