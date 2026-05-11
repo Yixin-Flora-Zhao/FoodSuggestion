@@ -34,6 +34,35 @@ export type MealRecommendation = {
   steps: string[];
 };
 
+
+type OpenAIResponseOutput = {
+  output_text?: string;
+  output?: Array<{
+    content?: Array<{
+      text?: string;
+      type?: string;
+    }>;
+  }>;
+};
+
+type OpenAIDetectedIngredient = {
+  name?: unknown;
+  quantity?: unknown;
+  confidence?: unknown;
+};
+
+type OpenAIIngredientResponse = {
+  ingredients?: OpenAIDetectedIngredient[];
+};
+
+declare const process: {
+  env?: Record<string, string | undefined>;
+};
+
+const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
+const OPENAI_VISION_MODEL = process.env?.EXPO_PUBLIC_OPENAI_VISION_MODEL ?? 'gpt-4.1-mini';
+const OPENAI_API_KEY = process.env?.EXPO_PUBLIC_OPENAI_API_KEY;
+
 type LocalizedMealTemplate = {
   id: string;
   cuisine: Record<Language, string>;
@@ -169,20 +198,86 @@ export function translateIngredientName(name: string, language: Language): strin
 }
 
 export async function detectIngredientsFromImages(images: FridgeImage[]): Promise<Ingredient[]> {
-  // OpenAI Vision API integration point:
-  // Replace this mock with a call that sends each image URI/base64 payload to a vision-capable OpenAI model
-  // and asks it to return structured ingredients with quantities and confidence scores.
-  await delay(900);
-
   if (images.length === 0) {
     return [];
   }
 
-  const count = Math.min(detectedIngredientPool.length, 5 + images.length * 2);
-  return detectedIngredientPool.slice(0, count).map((ingredient, index) => ({
-    ...ingredient,
-    id: `${ingredient.id}-${index}`,
-  }));
+  if (!OPENAI_API_KEY) {
+    return detectIngredientsWithMock(images);
+  }
+
+  const imageDataUrls = await Promise.all(images.map((image) => imageUriToDataUrl(image.uri)));
+  const response = await fetch(OPENAI_RESPONSES_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: OPENAI_VISION_MODEL,
+      input: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: 'Identify visible food ingredients in these refrigerator or grocery photos. Return only ingredients you can see. Use common ingredient names, short quantity estimates when visible, and confidence from 0 to 1.',
+            },
+            ...imageDataUrls.map((imageUrl) => ({
+              type: 'input_image',
+              image_url: imageUrl,
+            })),
+          ],
+        },
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'fridge_ingredients',
+          strict: true,
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              ingredients: {
+                type: 'array',
+                maxItems: 24,
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    name: {
+                      type: 'string',
+                      description: 'A concise, common food ingredient name in English.',
+                    },
+                    quantity: {
+                      type: 'string',
+                      description: 'A short visible quantity estimate, or an empty string if not clear.',
+                    },
+                    confidence: {
+                      type: 'number',
+                      minimum: 0,
+                      maximum: 1,
+                    },
+                  },
+                  required: ['name', 'quantity', 'confidence'],
+                },
+              },
+            },
+            required: ['ingredients'],
+          },
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`OpenAI ingredient detection failed (${response.status}): ${errorBody}`);
+  }
+
+  const openAIResponse = (await response.json()) as OpenAIResponseOutput;
+  return normalizeOpenAIIngredients(parseOpenAIIngredientResponse(openAIResponse));
 }
 
 export async function recommendMealsFromIngredients(
@@ -216,6 +311,78 @@ export async function recommendMealsFromIngredients(
     cookingTime: formatCookingTime(template.cookingMinutes, language),
     steps: template.steps[language],
   }));
+}
+
+
+async function detectIngredientsWithMock(images: FridgeImage[]): Promise<Ingredient[]> {
+  await delay(900);
+
+  const count = Math.min(detectedIngredientPool.length, 5 + images.length * 2);
+  return detectedIngredientPool.slice(0, count).map((ingredient, index) => ({
+    ...ingredient,
+    id: `${ingredient.id}-${index}`,
+  }));
+}
+
+async function imageUriToDataUrl(uri: string): Promise<string> {
+  if (uri.startsWith('data:')) {
+    return uri;
+  }
+
+  const imageResponse = await fetch(uri);
+  const blob = await imageResponse.blob();
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Unable to read image data.'));
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error('Image data conversion did not produce a data URL.'));
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+function parseOpenAIIngredientResponse(response: OpenAIResponseOutput): OpenAIIngredientResponse {
+  const responseText = response.output_text ?? response.output?.flatMap((item) => item.content ?? []).find((content) => content.type === 'output_text' || content.text)?.text;
+
+  if (!responseText) {
+    throw new Error('OpenAI did not return ingredient text.');
+  }
+
+  return JSON.parse(responseText) as OpenAIIngredientResponse;
+}
+
+function normalizeOpenAIIngredients(response: OpenAIIngredientResponse): Ingredient[] {
+  const seen = new Set<string>();
+
+  return (response.ingredients ?? [])
+    .map((ingredient) => {
+      const name = typeof ingredient.name === 'string' ? ingredient.name.trim().toLowerCase() : '';
+      const quantity = typeof ingredient.quantity === 'string' ? ingredient.quantity.trim() : undefined;
+      const confidence = typeof ingredient.confidence === 'number' ? Math.min(Math.max(ingredient.confidence, 0), 1) : 0.5;
+
+      return { name, quantity, confidence };
+    })
+    .filter((ingredient) => {
+      if (!ingredient.name || seen.has(ingredient.name)) {
+        return false;
+      }
+
+      seen.add(ingredient.name);
+      return true;
+    })
+    .map((ingredient, index) => ({
+      id: `${ingredient.name.replace(/[^a-z0-9]+/g, '-') || 'ingredient'}-${Date.now()}-${index}`,
+      name: ingredient.name,
+      quantity: ingredient.quantity,
+      confidence: ingredient.confidence,
+      source: 'photo' as const,
+    }));
 }
 
 export function estimateNutrition(meal: { nutrition: Nutrition }): Nutrition {

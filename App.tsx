@@ -69,7 +69,7 @@ export default function App() {
       return;
     }
 
-    appendImages(result.assets.map((asset) => ({ uri: asset.uri, source: 'camera' as const })));
+    appendImages(result.assets.map((asset: { uri: string }) => ({ uri: asset.uri, source: 'camera' as const })));
   }
 
   async function uploadRefrigeratorPhotos() {
@@ -90,7 +90,7 @@ export default function App() {
       return;
     }
 
-    appendImages(result.assets.map((asset) => ({ uri: asset.uri, source: 'library' as const })));
+    appendImages(result.assets.map((asset: { uri: string }) => ({ uri: asset.uri, source: 'library' as const })));
   }
 
   function appendImages(newImages: Array<Omit<FridgeImage, 'id'>>) {
@@ -106,10 +106,16 @@ export default function App() {
 
   async function scanImages() {
     setLoadingMessage(t.scanning);
-    const detectedIngredients = await detectIngredientsFromImages(images);
-    setIngredients((currentIngredients) => mergeIngredients(currentIngredients, detectedIngredients));
-    setMeals([]);
-    setLoadingMessage(null);
+
+    try {
+      const detectedIngredients = await detectIngredientsFromImages(images);
+      setIngredients((currentIngredients) => mergeIngredients(currentIngredients, detectedIngredients));
+      setMeals([]);
+    } catch (error) {
+      Alert.alert(t.scanErrorTitle, error instanceof Error ? error.message : t.scanErrorMessage);
+    } finally {
+      setLoadingMessage(null);
+    }
   }
 
   function addManualIngredient() {
