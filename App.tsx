@@ -35,7 +35,6 @@ const languages: Language[] = ['en', 'zh'];
 type AppScreen = 'photos' | 'ingredients' | 'meals';
 type MealTab = 'all' | MealCategory;
 type TranslationKey = keyof typeof translations.en;
-const translationLookup = translations as Record<string, Record<string, unknown>>;
 
 export default function App() {
   const [language, setLanguage] = useState<Language>('en');
@@ -49,9 +48,10 @@ export default function App() {
   const [mealError, setMealError] = useState<string | null>(null);
   const manualInputRef = useRef<TextInput>(null);
 
-  const t = (key: string) => {
-    const value = translationLookup[language]?.[key] ?? translationLookup.en?.[key] ?? key;
-    return typeof value === 'string' ? value : key;
+  const t = (key: TranslationKey) => {
+    return translations[language]?.[key]
+      ?? translations.en?.[key]
+      ?? key;
   };
   const isBusy = loadingMessage !== null;
   const filteredMeals = useMemo(
@@ -259,7 +259,7 @@ export default function App() {
         <View style={styles.appHeader}>
           <View>
             <Text style={styles.eyebrow}>{t('eyebrow')}</Text>
-            <Text style={styles.title}>Food Pollution</Text>
+            <Text style={styles.appTitle}>{t('appName')}</Text>
             <Text style={styles.appSubtitle}>{t('subtitle')}</Text>
           </View>
           <View style={styles.languageMenu}>
@@ -523,9 +523,10 @@ type MealCardProps = {
 };
 
 function MealCard({ language, meal }: MealCardProps) {
-  const t = (key: string) => {
-    const value = translationLookup[language]?.[key] ?? translationLookup.en?.[key] ?? key;
-    return typeof value === 'string' ? value : key;
+  const t = (key: TranslationKey) => {
+    return translations[language]?.[key]
+      ?? translations.en?.[key]
+      ?? key;
   };
   const mealImageUri = mealImageUris[meal.id] ?? mealImageUris['tomato-cucumber-yogurt-salad'];
   const macros = [
@@ -559,7 +560,7 @@ function MealCard({ language, meal }: MealCardProps) {
       </View>
 
       <InfoLine label={t('used')} value={meal.ingredientsUsed.length > 0 ? meal.ingredientsUsed.join(', ') : '—'} />
-      <InfoLine label={t('optionalMissing')} value={meal.missingOptionalIngredients.join(', ') || '—'} />
+      <InfoLine label={t('optionalMissing')} value={meal.missingOptionalIngredients.join(', ')} />
       <InfoLine label={t('nutrition')} value={`${meal.nutrition.calories} ${t('calories')}${macros.length > 0 ? ` • ${macros.join(' • ')}` : ''}`} />
 
       <Text style={styles.stepsTitle}>{t('steps')}</Text>
@@ -620,6 +621,14 @@ const styles = StyleSheet.create({
     color: '#064E3B',
     fontSize: 24,
     fontWeight: '700',
+  },
+  appSubtitle: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 3,
+    maxWidth: 230,
   },
   appSubtitle: {
     color: '#475569',
@@ -981,7 +990,7 @@ const styles = StyleSheet.create({
   mealMeta: {
     color: '#047857',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '900',
     marginTop: 4,
   },
   mealIngredientLine: {
@@ -993,7 +1002,7 @@ const styles = StyleSheet.create({
   },
   mealIngredientLabel: {
     color: '#0F172A',
-    fontWeight: '700',
+    fontWeight: '900',
   },
   mealImageWrap: {
     borderRadius: 20,
@@ -1021,7 +1030,7 @@ const styles = StyleSheet.create({
   saveMealButtonText: {
     color: '#047857',
     fontSize: 19,
-    fontWeight: '700',
+    fontWeight: '900',
     lineHeight: 22,
   },
   mealDescription: {
@@ -1044,7 +1053,7 @@ const styles = StyleSheet.create({
   timeBadgeText: {
     color: '#047857',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   infoLine: {
     marginBottom: 8,
@@ -1052,7 +1061,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     color: '#0F172A',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   infoValue: {
     color: '#475569',
@@ -1064,7 +1073,7 @@ const styles = StyleSheet.create({
   stepsTitle: {
     color: '#0F172A',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '900',
     marginTop: 8,
     marginBottom: 6,
   },
@@ -1145,6 +1154,6 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#047857',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '900',
   },
 });
