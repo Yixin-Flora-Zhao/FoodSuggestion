@@ -93,6 +93,43 @@ export default function App() {
     appendImages(result.assets.map((asset: { uri: string }) => ({ uri: asset.uri, source: 'library' as const })));
   }
 
+  async function cropPhoto(id: string) {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(t.permissionTitle, t.libraryPermission);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      quality: 0.85,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const replacement = result.assets[0];
+
+    if (!replacement) {
+      return;
+    }
+
+    setImages((currentImages) =>
+      currentImages.map((image) =>
+        image.id === id
+          ? {
+              ...image,
+              uri: replacement.uri,
+              rotation: 0,
+            }
+          : image,
+      ),
+    );
+    clearAnalysis();
+  }
+
   function appendImages(newImages: Array<Omit<FridgeImage, 'id'>>) {
     setImages((currentImages) => [
       ...currentImages,
@@ -137,6 +174,7 @@ export default function App() {
       const detectedIngredients = await detectIngredientsFromImages(images);
       setIngredients((currentIngredients) => mergeIngredients(currentIngredients, detectedIngredients));
       setMeals([]);
+      setScreen('ingredients');
     } catch (error) {
       Alert.alert(t.scanErrorTitle, error instanceof Error ? error.message : t.scanErrorMessage);
     } finally {
@@ -464,27 +502,35 @@ function CategoryTab({ active, label, onPress }: CategoryTabProps) {
 }
 
 type MealCardProps = {
-  language: Language;
+  language: AppLanguage;
   meal: MealRecommendation;
 };
 
 function MealCard({ language, meal }: MealCardProps) {
   const t = translations[language];
-  const macros = [
-    meal.nutrition.protein ? `${meal.nutrition.protein}g ${t.protein}` : null,
-    meal.nutrition.carbs ? `${meal.nutrition.carbs}g ${t.carbs}` : null,
-    meal.nutrition.fat ? `${meal.nutrition.fat}g ${t.fat}` : null,
-  ].filter(Boolean);
+  const mealImageUri = mealImageUris[meal.id] ?? mealImageUris['tomato-cucumber-yogurt-salad'];
 
   return (
     <View style={styles.mealCard}>
-      <View style={styles.mealHeader}>
+      <View style={styles.mealContent}>
         <View style={styles.mealTitleBlock}>
           <Text style={styles.mealName}>{meal.name}</Text>
           <Text style={styles.mealMeta}>{`${meal.cuisine} • ${categoryLabels[language][meal.category]}`}</Text>
+          <Text style={styles.mealIngredientLine} numberOfLines={2}>
+            <Text style={styles.mealIngredientLabel}>{t.matchingIngredients}: </Text>
+            {meal.ingredientsUsed.length > 0 ? meal.ingredientsUsed.join(', ') : '—'}
+          </Text>
+          <Text style={styles.mealIngredientLine} numberOfLines={2}>
+            <Text style={styles.mealIngredientLabel}>{t.missingIngredients}: </Text>
+            {meal.missingOptionalIngredients.length > 0 ? meal.missingOptionalIngredients.join(', ') : '—'}
+          </Text>
         </View>
-        <View style={styles.timeBadge}>
-          <Text style={styles.timeBadgeText}>{meal.cookingTime}</Text>
+
+        <View style={styles.mealImageWrap}>
+          <Image source={{ uri: mealImageUri }} style={styles.mealImage} />
+          <TouchableOpacity accessibilityLabel={t.saveMeal} accessibilityRole="button" onPress={() => undefined} style={styles.saveMealButton}>
+            <Text style={styles.saveMealButtonText}>＋</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -550,6 +596,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ECFDF5',
     borderRadius: 999,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 4,
     padding: 4,
@@ -567,8 +614,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
-  languageTextActive: {
-    color: '#FFFFFF',
+  stepTabTextActive: {
+    color: '#047857',
   },
   stepTabs: {
     backgroundColor: '#FFFFFF',
@@ -848,28 +895,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   mealCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderColor: '#E2E8F0',
-    borderRadius: 22,
+    borderRadius: 26,
     borderWidth: 1,
-    marginBottom: 14,
-    padding: 16,
+    marginBottom: 16,
+    padding: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
   },
-  mealHeader: {
-    alignItems: 'flex-start',
+  mealContent: {
     flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: 14,
   },
   mealTitleBlock: {
     flex: 1,
+    paddingVertical: 4,
   },
   mealName: {
     color: '#0F172A',
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '900',
-    lineHeight: 24,
+    lineHeight: 23,
   },
   mealMeta: {
     color: '#64748B',
@@ -880,13 +930,23 @@ const styles = StyleSheet.create({
   timeBadge: {
     backgroundColor: '#D1FAE5',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderWidth: 3,
+    bottom: -8,
+    height: 38,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -8,
+    width: 38,
   },
   timeBadgeText: {
     color: '#047857',
     fontSize: 12,
     fontWeight: '900',
+  },
+  mealStatLabel: {
+    color: '#047857',
+    fontSize: 12,
+    fontWeight: '800',
   },
   infoLine: {
     marginBottom: 8,
