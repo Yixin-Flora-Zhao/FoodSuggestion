@@ -12,7 +12,6 @@ The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refr
   - Meal recommendations
 - Top-right language selector with English as the default language.
 - Multiple photo selection through `expo-image-picker`.
-- Per-photo controls to crop, rotate, or delete images before analysis.
 - OpenAI Vision-powered refrigerator image analysis when `EXPO_PUBLIC_OPENAI_API_KEY` is available.
 - Local mock refrigerator image analysis fallback when no API key is configured.
 - Editable ingredient confirmation step before meal generation.
@@ -26,7 +25,7 @@ The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refr
 The AI service exposes clearly named functions for image recognition and meal planning:
 
 - `detectIngredientsFromImages(images)` — sends selected image data to the OpenAI Responses API with a vision-capable model and requests structured ingredient JSON. Without an API key, it uses the local mock detector.
-- `recommendMealsFromIngredients(ingredients, language)` — local rule-based meal ideas that can later be replaced or augmented with OpenAI text generation. Ingredient names are canonicalized across supported languages before matching so Chinese/French inputs still map to the same recipe logic.
+- `recommendMealsFromIngredients(ingredients, language)` — local rule-based meal ideas that can later be replaced or augmented with OpenAI text generation.
 - `estimateNutrition(meal)` — placeholder for more precise nutrition estimation.
 
 ### OpenAI setup

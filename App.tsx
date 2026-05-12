@@ -93,43 +93,6 @@ export default function App() {
     appendImages(result.assets.map((asset: { uri: string }) => ({ uri: asset.uri, source: 'library' as const })));
   }
 
-  async function cropPhoto(id: string) {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert(t.permissionTitle, t.libraryPermission);
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      quality: 0.85,
-    });
-
-    if (result.canceled) {
-      return;
-    }
-
-    const replacement = result.assets[0];
-
-    if (!replacement) {
-      return;
-    }
-
-    setImages((currentImages) =>
-      currentImages.map((image) =>
-        image.id === id
-          ? {
-              ...image,
-              uri: replacement.uri,
-              rotation: 0,
-            }
-          : image,
-      ),
-    );
-    clearAnalysis();
-  }
-
   function appendImages(newImages: Array<Omit<FridgeImage, 'id'>>) {
     setImages((currentImages) => [
       ...currentImages,
@@ -174,7 +137,6 @@ export default function App() {
       const detectedIngredients = await detectIngredientsFromImages(images);
       setIngredients((currentIngredients) => mergeIngredients(currentIngredients, detectedIngredients));
       setMeals([]);
-      setScreen('ingredients');
     } catch (error) {
       Alert.alert(t.scanErrorTitle, error instanceof Error ? error.message : t.scanErrorMessage);
     } finally {
