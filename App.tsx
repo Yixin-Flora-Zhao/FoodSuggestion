@@ -16,18 +16,16 @@ import {
   View,
 } from 'react-native';
 
-import { categoryLabels, languageLabels, translations } from './src/i18n/translations';
+import { getTranslation, languageLabels, type AppLanguage, type TranslationKey } from './src/locales/translations';
 import {
   canonicalizeIngredientName,
   detectIngredientsFromImages,
   type FridgeImage,
   type Ingredient,
-  type Language,
-  type MealCategory,
-  type MealRecommendation,
-  recommendMealsFromIngredients,
   translateIngredientName,
 } from './src/services/ai';
+import { languageStorage } from './src/services/languageStorage';
+import { generateMealSuggestions, type MealCuisine, type MealSuggestion } from './src/services/mealRecommendationService';
 
 const categoryOrder: MealCategory[] = ['vegetables', 'meats', 'staples', 'snacks', 'drinks'];
 const languages: Language[] = ['en', 'zh', 'fr'];
@@ -43,20 +41,29 @@ export default function App() {
   const [activeMealTab, setActiveMealTab] = useState<MealTab>('all');
   const [manualIngredient, setManualIngredient] = useState('');
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
+  const [mealError, setMealError] = useState<string | null>(null);
   const manualInputRef = useRef<TextInput>(null);
 
-  const t = translations[language];
+  const t = (key: TranslationKey) => getTranslation(language, key);
   const isBusy = loadingMessage !== null;
   const filteredMeals = useMemo(
     () => (activeMealTab === 'all' ? meals : meals.filter((meal) => meal.category === activeMealTab)),
     [activeMealTab, meals],
   );
 
+  useEffect(() => {
+    languageStorage.getItem().then((storedLanguage) => {
+      if (storedLanguage) {
+        setLanguage(storedLanguage);
+      }
+    });
+  }, []);
+
   async function takeRefrigeratorPhoto() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(t.permissionTitle, t.cameraPermission);
+      Alert.alert(t('permissionTitle'), t('cameraPermission'));
       return;
     }
 
@@ -76,7 +83,7 @@ export default function App() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(t.permissionTitle, t.libraryPermission);
+      Alert.alert(t('permissionTitle'), t('libraryPermission'));
       return;
     }
 
@@ -200,19 +207,19 @@ export default function App() {
       ]),
     );
     setManualIngredient('');
-    setMeals([]);
+    clearMealSuggestions();
   }
 
   function updateIngredientName(id: string, name: string) {
     setIngredients((currentIngredients) =>
       currentIngredients.map((ingredient) => (ingredient.id === id ? { ...ingredient, name } : ingredient)),
     );
-    setMeals([]);
+    clearMealSuggestions();
   }
 
   function removeIngredient(id: string) {
     setIngredients((currentIngredients) => currentIngredients.filter((ingredient) => ingredient.id !== id));
-    setMeals([]);
+    clearMealSuggestions();
   }
 
   async function generateMeals() {
@@ -813,6 +820,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
   },
+  emptyIngredientsCard: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+  },
+  emptyIngredientsTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+  emptyIngredientsText: {
+    color: '#64748B',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
   ingredientsGrid: {
     gap: 10,
   },
@@ -921,7 +948,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 23,
   },
-  mealMeta: {
+  mealDescription: {
     color: '#64748B',
     fontSize: 13,
     fontWeight: '800',
@@ -951,29 +978,77 @@ const styles = StyleSheet.create({
   infoLine: {
     marginBottom: 8,
   },
-  infoLabel: {
-    color: '#047857',
-    fontSize: 12,
+  mealStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+  },
+  mealStatPill: {
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  mealStatValue: {
+    color: '#064E3B',
+    fontSize: 13,
     fontWeight: '900',
     marginBottom: 2,
   },
-  infoValue: {
-    color: '#334155',
-    fontSize: 14,
-    lineHeight: 20,
+  mealStatLabel: {
+    color: '#047857',
+    fontSize: 12,
+    fontWeight: '800',
   },
-  stepsTitle: {
-    color: '#0F172A',
+  emptyText: {
+    color: '#64748B',
     fontSize: 15,
-    fontWeight: '900',
-    marginTop: 6,
-    marginBottom: 6,
+    fontWeight: '700',
+    lineHeight: 22,
+    paddingVertical: 24,
+    textAlign: 'center',
   },
-  stepText: {
-    color: '#475569',
+  errorText: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 16,
+    color: '#B91C1C',
     fontSize: 14,
+    fontWeight: '800',
     lineHeight: 20,
-    marginBottom: 4,
+    marginBottom: 14,
+    padding: 12,
+  },
+  disabledButton: {
+    opacity: 0.45,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    backgroundColor: 'rgba(248, 250, 252, 0.72)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  loadingCard: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 6,
+  },
+  loadingText: {
+    color: '#047857',
+    fontSize: 16,
+    fontWeight: '900',
   },
   emptyText: {
     color: '#64748B',
