@@ -13,6 +13,7 @@ export type FridgeImage = {
   id: string;
   uri: string;
   source: 'camera' | 'library' | 'demo';
+  rotation?: number;
 };
 
 export type Nutrition = {
@@ -94,6 +95,16 @@ const ingredientTranslations: Record<string, Record<Language, string>> = {
   beef: { en: 'beef', zh: '牛肉', fr: 'bœuf' },
   lettuce: { en: 'lettuce', zh: '生菜', fr: 'laitue' },
 };
+
+const localizedIngredientLookup = Object.entries(ingredientTranslations).reduce<Record<string, string>>((lookup, [canonicalName, translations]) => {
+  lookup[canonicalName] = canonicalName;
+
+  Object.values(translations).forEach((translatedName) => {
+    lookup[translatedName.toLowerCase()] = canonicalName;
+  });
+
+  return lookup;
+}, {});
 
 const detectedIngredientPool: Ingredient[] = [
   { id: 'eggs', name: 'eggs', quantity: '6', confidence: 0.94, source: 'photo' },
@@ -193,8 +204,13 @@ const mealTemplates: LocalizedMealTemplate[] = [
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
+export function canonicalizeIngredientName(name: string): string {
+  return localizedIngredientLookup[name.toLowerCase().trim()] ?? name.toLowerCase().trim();
+}
+
 export function translateIngredientName(name: string, language: Language): string {
-  return ingredientTranslations[name.toLowerCase()]?.[language] ?? name;
+  const canonicalName = canonicalizeIngredientName(name);
+  return ingredientTranslations[canonicalName]?.[language] ?? name;
 }
 
 export async function detectIngredientsFromImages(images: FridgeImage[]): Promise<Ingredient[]> {
@@ -289,7 +305,7 @@ export async function recommendMealsFromIngredients(
   // confirmed ingredients, user language, cuisine/category requirements, and returns JSON meal plans.
   await delay(900);
 
-  const available = new Set(ingredients.map((ingredient) => ingredient.name.toLowerCase().trim()));
+  const available = new Set(ingredients.map((ingredient) => canonicalizeIngredientName(ingredient.name)));
   const scoredTemplates = mealTemplates
     .map((template) => {
       const used = [...template.requiredAny, ...template.bonusIngredients].filter((ingredient) => available.has(ingredient));

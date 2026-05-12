@@ -6,17 +6,18 @@ The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refr
 
 ## Features
 
-- Home screen with three primary actions:
-  - Take refrigerator photos
-  - Upload refrigerator photos
-  - Add food manually
+- Three-step mobile flow instead of one long page:
+  - Photo capture/upload and photo cleanup
+  - Ingredient review and manual edits
+  - Meal recommendations
+- Top-right language selector with English as the default language.
 - Multiple photo selection through `expo-image-picker`.
 - OpenAI Vision-powered refrigerator image analysis when `EXPO_PUBLIC_OPENAI_API_KEY` is available.
 - Local mock refrigerator image analysis fallback when no API key is configured.
 - Editable ingredient confirmation step before meal generation.
-- Meal recommendations grouped into vegetables, meats, main food / staples, snacks, and drinks.
+- Meal recommendations browsed with category tabs for vegetables, meats, staples, snacks, and drinks.
 - Per-meal cuisine, ingredients used, missing optional ingredients, estimated calories, macros, cooking time, and simple cooking steps.
-- Language selector for English, Chinese, and French app labels and meal suggestions.
+- Fully localized English, Chinese, and French labels for the redesigned flow and meal suggestions.
 - Loading states for scanning the refrigerator and generating meal ideas.
 
 ## AI/API architecture
