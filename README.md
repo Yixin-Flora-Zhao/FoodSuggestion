@@ -2,7 +2,7 @@
 
 FridgeChef AI is an Expo React Native prototype that helps users turn refrigerator contents into realistic meal ideas. Users can take or upload multiple fridge photos, review AI-detected ingredients with confidence labels, add or edit ingredients manually, and generate meal recommendations across Western, Chinese, and international cuisines.
 
-The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refrigerator photo analysis and meal suggestions fall back to local development data so the rest of the app remains usable.
+The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refrigerator photo analysis falls back to the local mock detector in `src/services/ai.ts` so the rest of the app remains usable during development.
 
 ## Features
 
@@ -10,15 +10,14 @@ The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refr
   - Photo capture/upload and photo cleanup
   - Ingredient review and manual edits
   - Meal recommendations
-- Top-right language selector with English as the default and a compact English/中文 menu.
+- Top-right language selector with English as the default language.
 - Multiple photo selection through `expo-image-picker`.
-- Per-photo controls to crop, rotate, or delete images before analysis.
 - OpenAI Vision-powered refrigerator image analysis when `EXPO_PUBLIC_OPENAI_API_KEY` is available.
 - Local mock refrigerator image analysis fallback when no API key is configured.
 - Editable ingredient confirmation step before meal generation.
-- GPT meal recommendations browsed with cuisine tabs for Chinese, Western, Japanese, Korean, and other meals.
-- Text-only meal cards with cuisine, matched ingredients, missing ingredients, match score, calories, and prep time.
-- Localized English and Chinese labels for the redesigned flow and meal suggestions.
+- Meal recommendations browsed with category tabs for vegetables, meats, staples, snacks, and drinks.
+- Per-meal cuisine, ingredients used, missing optional ingredients, estimated calories, macros, cooking time, and simple cooking steps.
+- Fully localized English, Chinese, and French labels for the redesigned flow and meal suggestions.
 - Loading states for scanning the refrigerator and generating meal ideas.
 
 ## AI/API architecture
@@ -26,9 +25,8 @@ The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refr
 The AI service exposes clearly named functions for image recognition and meal planning:
 
 - `detectIngredientsFromImages(images)` — sends selected image data to the OpenAI Responses API with a vision-capable model and requests structured ingredient JSON. Without an API key, it uses the local mock detector.
-- `generateMealSuggestions({ ingredients, language })` — sends up to 10 confirmed ingredients to the OpenAI Responses API using `gpt-5-mini`, with `gpt-4.1-mini` fallback, and returns structured JSON meal suggestions. If no API key is configured, it returns local development suggestions.
-- `src/locales/translations.ts` — lightweight English/Chinese translation table used by the app-level `t(key)` helper.
-- `src/services/languageStorage.ts` — AsyncStorage-style language persistence adapter for the selected app language.
+- `recommendMealsFromIngredients(ingredients, language)` — local rule-based meal ideas that can later be replaced or augmented with OpenAI text generation.
+- `estimateNutrition(meal)` — placeholder for more precise nutrition estimation.
 
 ### OpenAI setup
 
@@ -39,7 +37,7 @@ export EXPO_PUBLIC_OPENAI_API_KEY="your_openai_api_key"
 npm start
 ```
 
-Optionally override the photo vision model:
+Optionally override the vision model:
 
 ```sh
 export EXPO_PUBLIC_OPENAI_VISION_MODEL="gpt-4.1-mini"
