@@ -612,15 +612,23 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: '#F97316',
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 1.2,
     marginBottom: 4,
     textTransform: 'uppercase',
   },
-  appTitle: {
+  title: {
     color: '#064E3B',
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '700',
+  },
+  appSubtitle: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 3,
+    maxWidth: 230,
   },
   appSubtitle: {
     color: '#475569',
@@ -650,7 +658,7 @@ const styles = StyleSheet.create({
   languageText: {
     color: '#047857',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   languageTextActive: {
     color: '#FFFFFF',
@@ -675,7 +683,7 @@ const styles = StyleSheet.create({
   stepTabText: {
     color: '#64748B',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   stepTabTextActive: {
     color: '#047857',
@@ -700,7 +708,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     color: '#0F172A',
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: -0.4,
   },
   screenSubtitle: {
@@ -730,7 +738,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   photoGridHeader: {
     marginTop: 18,
@@ -739,7 +747,7 @@ const styles = StyleSheet.create({
   photoCountText: {
     color: '#475569',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   photoGrid: {
     flexDirection: 'row',
@@ -763,7 +771,7 @@ const styles = StyleSheet.create({
   photoLabel: {
     color: '#334155',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
     marginTop: 8,
   },
   photoActions: {
@@ -784,7 +792,7 @@ const styles = StyleSheet.create({
   miniButtonText: {
     color: '#0369A1',
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   miniButtonTextDestructive: {
     color: '#B91C1C',
@@ -800,7 +808,7 @@ const styles = StyleSheet.create({
   primaryCtaText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   secondaryCta: {
     alignItems: 'center',
@@ -812,7 +820,7 @@ const styles = StyleSheet.create({
   secondaryCtaText: {
     color: '#334155',
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   flexCta: {
     flex: 1,
@@ -849,7 +857,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   emptyIngredientsCard: {
     alignItems: 'center',
@@ -862,7 +870,7 @@ const styles = StyleSheet.create({
   emptyIngredientsTitle: {
     color: '#0F172A',
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '700',
     marginBottom: 6,
   },
   emptyIngredientsText: {
@@ -889,13 +897,13 @@ const styles = StyleSheet.create({
     color: '#064E3B',
     flex: 1,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     paddingVertical: 6,
   },
   confidenceText: {
     color: '#047857',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   removeButton: {
     alignItems: 'center',
@@ -908,7 +916,7 @@ const styles = StyleSheet.create({
   removeButtonText: {
     color: '#065F46',
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     lineHeight: 22,
   },
   mealScreenHeader: {
@@ -929,7 +937,7 @@ const styles = StyleSheet.create({
   restartButtonText: {
     color: '#C2410C',
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   mealTabs: {
     marginBottom: 16,
@@ -947,7 +955,7 @@ const styles = StyleSheet.create({
   categoryTabText: {
     color: '#475569',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   categoryTabTextActive: {
     color: '#FFFFFF',
@@ -976,7 +984,7 @@ const styles = StyleSheet.create({
   mealName: {
     color: '#0F172A',
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '700',
     lineHeight: 23,
   },
   mealMeta: {
@@ -1028,7 +1036,7 @@ const styles = StyleSheet.create({
   mealDescription: {
     color: '#64748B',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     marginTop: 4,
   },
   timeBadge: {
@@ -1093,13 +1101,13 @@ const styles = StyleSheet.create({
   mealStatValue: {
     color: '#064E3B',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
     marginBottom: 2,
   },
   mealStatLabel: {
     color: '#047857',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   emptyText: {
     color: '#64748B',
@@ -1114,7 +1122,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     color: '#B91C1C',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     lineHeight: 20,
     marginBottom: 14,
     padding: 12,
