@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,28 +16,28 @@ import {
   View,
 } from 'react-native';
 
-import { categoryLabels, languageLabels, translations } from './src/i18n/translations';
 import {
   canonicalizeIngredientName,
   detectIngredientsFromImages,
   recommendMealsFromIngredients,
   type FridgeImage,
   type Ingredient,
-  type Language,
   type MealCategory,
   type MealRecommendation,
-  translateIngredientName,
 } from './src/services/ai';
-import { languageStorage } from './src/services/languageStorage';
 
 const categoryOrder: MealCategory[] = ['vegetables', 'meats', 'staples', 'snacks', 'drinks'];
-const languages: Language[] = ['en', 'zh'];
+const categoryLabels: Record<MealCategory, string> = {
+  vegetables: 'Vegetables',
+  meats: 'Meats',
+  staples: 'Staples',
+  snacks: 'Snacks',
+  drinks: 'Drinks',
+};
 type AppScreen = 'photos' | 'ingredients' | 'meals';
 type MealTab = 'all' | MealCategory;
-type TranslationKey = keyof typeof translations.en;
 
 export default function App() {
-  const [language, setLanguage] = useState<Language>('en');
   const [screen, setScreen] = useState<AppScreen>('photos');
   const [images, setImages] = useState<FridgeImage[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -48,30 +48,18 @@ export default function App() {
   const [mealError, setMealError] = useState<string | null>(null);
   const manualInputRef = useRef<TextInput>(null);
 
-  const t = (key: TranslationKey) => {
-    return translations[language]?.[key]
-      ?? translations.en?.[key]
-      ?? key;
-  };
   const isBusy = loadingMessage !== null;
   const filteredMeals = useMemo(
     () => (activeMealTab === 'all' ? meals : meals.filter((meal) => meal.category === activeMealTab)),
     [activeMealTab, meals],
   );
 
-  useEffect(() => {
-    languageStorage.getItem().then((storedLanguage) => {
-      if (storedLanguage) {
-        setLanguage(storedLanguage);
-      }
-    });
-  }, []);
 
   async function takeRefrigeratorPhoto() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(t('permissionTitle'), t('cameraPermission'));
+      Alert.alert('Permission needed', 'Camera access is needed to take refrigerator photos.');
       return;
     }
 
@@ -91,7 +79,7 @@ export default function App() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(t('permissionTitle'), t('libraryPermission'));
+      Alert.alert('Permission needed', 'Photo library access is needed to upload refrigerator photos.');
       return;
     }
 
@@ -112,7 +100,7 @@ export default function App() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(t('permissionTitle'), t('libraryPermission'));
+      Alert.alert('Permission needed', 'Photo library access is needed to upload refrigerator photos.');
       return;
     }
 
@@ -165,9 +153,9 @@ export default function App() {
   }
 
   function confirmDeletePhoto(id: string) {
-    Alert.alert(t('deletePhotoTitle'), t('deletePhotoMessage'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('delete'), style: 'destructive', onPress: () => deletePhoto(id) },
+    Alert.alert('Delete photo?', 'This photo will be removed from the analysis.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deletePhoto(id) },
     ]);
   }
 
@@ -183,7 +171,7 @@ export default function App() {
   }
 
   async function scanImages() {
-    setLoadingMessage(t('scanning'));
+    setLoadingMessage('Scanning refrigerator...');
 
     try {
       const detectedIngredients = await detectIngredientsFromImages(images);
@@ -191,7 +179,7 @@ export default function App() {
       setMeals([]);
       setScreen('ingredients');
     } catch (error) {
-      Alert.alert(t('scanErrorTitle'), error instanceof Error ? error.message : t('scanErrorMessage'));
+      Alert.alert('Photo analysis failed', error instanceof Error ? error.message : 'Please try again or add ingredients manually.');
     } finally {
       setLoadingMessage(null);
     }
@@ -231,10 +219,10 @@ export default function App() {
   }
 
   async function generateMeals() {
-    setLoadingMessage(t('generating'));
+    setLoadingMessage('Finding meals');
 
     try {
-      const recommendedMeals = await recommendMealsFromIngredients(ingredients, language);
+      const recommendedMeals = await recommendMealsFromIngredients(ingredients, 'en');
       setMeals(recommendedMeals);
       setActiveMealTab('all');
       setScreen('meals');
@@ -258,28 +246,17 @@ export default function App() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardView}>
         <View style={styles.appHeader}>
           <View>
-            <Text style={styles.eyebrow}>{t('eyebrow')}</Text>
-            <Text style={styles.appTitle}>{t('appName')}</Text>
-            <Text style={styles.appSubtitle}>{t('subtitle')}</Text>
-          </View>
-          <View style={styles.languageMenu}>
-            {languages.map((item) => (
-              <TouchableOpacity
-                accessibilityRole="button"
-                key={item}
-                onPress={() => setLanguage(item)}
-                style={[styles.languageChip, language === item && styles.languageChipActive]}
-              >
-                <Text style={[styles.languageText, language === item && styles.languageTextActive]}>{languageLabels[item]}</Text>
-              </TouchableOpacity>
-            ))}
+            <Text style={{ color: "black", fontSize: 32 }}>Food Pollution</Text>
+            <Text style={styles.eyebrow}>AI refrigerator cooking assistant</Text>
+            <Text style={styles.appTitle}>Food Pollution</Text>
+            <Text style={styles.appSubtitle}>Upload fridge photos, review detected ingredients, and get meal ideas by category.</Text>
           </View>
         </View>
 
         <View style={styles.stepTabs}>
-          <StepTab active={screen === 'photos'} label={t('uploadStep')} onPress={() => setScreen('photos')} />
-          <StepTab active={screen === 'ingredients'} disabled={ingredients.length === 0} label={t('ingredientsStep')} onPress={() => setScreen('ingredients')} />
-          <StepTab active={screen === 'meals'} disabled={meals.length === 0} label={t('mealsStep')} onPress={() => setScreen('meals')} />
+          <StepTab active={screen === 'photos'} label={'Photos'} onPress={() => setScreen('photos')} />
+          <StepTab active={screen === 'ingredients'} disabled={ingredients.length === 0} label={'Ingredients'} onPress={() => setScreen('ingredients')} />
+          <StepTab active={screen === 'meals'} disabled={meals.length === 0} label={'Meals'} onPress={() => setScreen('meals')} />
         </View>
 
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -303,27 +280,27 @@ export default function App() {
   function renderPhotosScreen() {
     return (
       <View style={styles.screenCard}>
-        <Text style={styles.screenTitle}>{t('selectedPhotos')}</Text>
-        <Text style={styles.screenSubtitle}>{t('photosIntro')}</Text>
+        <Text style={styles.screenTitle}>{'Photos'}</Text>
+        <Text style={styles.screenSubtitle}>{'Start with clear photos of shelves, drawers, and labels. You can crop, rotate, or delete photos before analysis.'}</Text>
 
         <View style={styles.primaryActions}>
-          <ActionButton disabled={isBusy} label={t('takePhotos')} onPress={takeRefrigeratorPhoto} tone="green" />
-          <ActionButton disabled={isBusy} label={t('uploadPhotos')} onPress={uploadRefrigeratorPhotos} tone="blue" />
+          <ActionButton disabled={isBusy} label={'Take photos'} onPress={takeRefrigeratorPhoto} tone="green" />
+          <ActionButton disabled={isBusy} label={'Upload photos'} onPress={uploadRefrigeratorPhotos} tone="blue" />
         </View>
 
         <View style={styles.photoGridHeader}>
-          <Text style={styles.photoCountText}>{images.length > 0 ? `${images.length} ${t('photoCount')}` : t('noPhotos')}</Text>
+          <Text style={styles.photoCountText}>{images.length > 0 ? `${images.length} ${'photos ready'}` : 'No photos yet. Take or upload fridge photos to begin.'}</Text>
         </View>
 
         <View style={styles.photoGrid}>
           {images.map((image, index) => (
             <View key={image.id} style={styles.photoCard}>
               <Image source={{ uri: image.uri }} style={[styles.photo, { transform: [{ rotate: `${image.rotation ?? 0}deg` }] }]} />
-              <Text style={styles.photoLabel}>{`${t('fallbackPhoto')} ${index + 1}`}</Text>
+              <Text style={styles.photoLabel}>{`${'Photo'} ${index + 1}`}</Text>
               <View style={styles.photoActions}>
-                <MiniButton disabled={isBusy} label={t('editPhoto')} onPress={() => cropPhoto(image.id)} />
-                <MiniButton disabled={isBusy} label={t('rotatePhoto')} onPress={() => rotatePhoto(image.id)} />
-                <MiniButton destructive disabled={isBusy} label={t('deletePhoto')} onPress={() => confirmDeletePhoto(image.id)} />
+                <MiniButton disabled={isBusy} label={'Crop'} onPress={() => cropPhoto(image.id)} />
+                <MiniButton disabled={isBusy} label={'Rotate'} onPress={() => rotatePhoto(image.id)} />
+                <MiniButton destructive disabled={isBusy} label={'Delete'} onPress={() => confirmDeletePhoto(image.id)} />
               </View>
             </View>
           ))}
@@ -335,7 +312,7 @@ export default function App() {
           onPress={scanImages}
           style={[styles.primaryCta, (images.length === 0 || isBusy) && styles.disabledButton]}
         >
-          <Text style={styles.primaryCtaText}>{t('scanFridge')}</Text>
+          <Text style={styles.primaryCtaText}>{'Analyze photos'}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -344,22 +321,22 @@ export default function App() {
   function renderIngredientsScreen() {
     return (
       <View style={styles.screenCard}>
-        <Text style={styles.screenTitle}>{t('ingredients')}</Text>
-        <Text style={styles.screenSubtitle}>{ingredients.length > 0 ? t('editHint') : t('ingredientIntro')}</Text>
+        <Text style={styles.screenTitle}>{'Ingredients'}</Text>
+        <Text style={styles.screenSubtitle}>{ingredients.length > 0 ? 'Edit ingredient names, remove incorrect items, then ask for meal suggestions.' : 'Confirm what the AI found before generating recommendations.'}</Text>
 
         <View style={styles.manualRow}>
           <TextInput
             ref={manualInputRef}
             onChangeText={setManualIngredient}
             onSubmitEditing={addManualIngredient}
-            placeholder={t('manualInputPlaceholder')}
+            placeholder={'Add ingredient, e.g. carrots'}
             placeholderTextColor="#94A3B8"
             returnKeyType="done"
             style={styles.manualInput}
             value={manualIngredient}
           />
           <TouchableOpacity accessibilityRole="button" onPress={addManualIngredient} style={styles.addButton}>
-            <Text style={styles.addButtonText}>{t('add')}</Text>
+            <Text style={styles.addButtonText}>{'Add ingredient'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -369,9 +346,9 @@ export default function App() {
               <TextInput
                 onChangeText={(name) => updateIngredientName(ingredient.id, name)}
                 style={styles.ingredientInput}
-                value={translateIngredientName(ingredient.name, language)}
+                value={ingredient.name}
               />
-              <Text style={styles.confidenceText}>{`${Math.round(ingredient.confidence * 100)}% ${t('confidence')}`}</Text>
+              <Text style={styles.confidenceText}>{`${Math.round(ingredient.confidence * 100)}% ${'confidence'}`}</Text>
               <TouchableOpacity accessibilityLabel="Remove ingredient" onPress={() => removeIngredient(ingredient.id)} style={styles.removeButton}>
                 <Text style={styles.removeButtonText}>×</Text>
               </TouchableOpacity>
@@ -381,7 +358,7 @@ export default function App() {
 
         <View style={styles.footerActions}>
           <TouchableOpacity accessibilityRole="button" disabled={isBusy} onPress={() => setScreen('photos')} style={styles.secondaryCta}>
-            <Text style={styles.secondaryCtaText}>{t('back')}</Text>
+            <Text style={styles.secondaryCtaText}>{'Back'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             accessibilityRole="button"
@@ -389,7 +366,7 @@ export default function App() {
             onPress={generateMeals}
             style={[styles.primaryCta, styles.flexCta, (ingredients.length === 0 || isBusy) && styles.disabledButton]}
           >
-            <Text style={styles.primaryCtaText}>{t('confirmMeals')}</Text>
+            <Text style={styles.primaryCtaText}>{'Finding meals'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -401,30 +378,30 @@ export default function App() {
       <View style={styles.screenCard}>
         <View style={styles.mealScreenHeader}>
           <View style={styles.mealTitleWrap}>
-            <Text style={styles.screenTitle}>{t('mealIdeas')}</Text>
-            <Text style={styles.screenSubtitle}>{t('mealIntro')}</Text>
+            <Text style={styles.screenTitle}>{'Finding meals'}</Text>
+            <Text style={styles.screenSubtitle}>{'Choose a category tab to browse matching meal ideas.'}</Text>
           </View>
           <TouchableOpacity accessibilityRole="button" onPress={startOver} style={styles.restartButton}>
-            <Text style={styles.restartButtonText}>{t('startOver')}</Text>
+            <Text style={styles.restartButtonText}>{'Start over'}</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTabs}>
-          <CategoryTab active={activeMealTab === 'all'} label={t('allCategories')} onPress={() => setActiveMealTab('all')} />
+          <CategoryTab active={activeMealTab === 'all'} label={'All'} onPress={() => setActiveMealTab('all')} />
           {categoryOrder.map((category) => (
             <CategoryTab
               active={activeMealTab === category}
               key={category}
-              label={categoryLabels[language][category]}
+              label={categoryLabels[category]}
               onPress={() => setActiveMealTab(category)}
             />
           ))}
         </ScrollView>
 
         {filteredMeals.length > 0 ? (
-          filteredMeals.map((meal) => <MealCard key={meal.id} language={language} meal={meal} />)
+          filteredMeals.map((meal) => <MealCard key={meal.id} meal={meal} />)
         ) : (
-          <Text style={styles.emptyText}>{t('noMealsInCategory')}</Text>
+          <Text style={styles.emptyText}>{'No meal suggestions in this category yet.'}</Text>
         )}
       </View>
     );
@@ -518,21 +495,15 @@ function CategoryTab({ active, label, onPress }: CategoryTabProps) {
 }
 
 type MealCardProps = {
-  language: Language;
   meal: MealRecommendation;
 };
 
-function MealCard({ language, meal }: MealCardProps) {
-  const t = (key: TranslationKey) => {
-    return translations[language]?.[key]
-      ?? translations.en?.[key]
-      ?? key;
-  };
+function MealCard({ meal }: MealCardProps) {
   const mealImageUri = mealImageUris[meal.id] ?? mealImageUris['tomato-cucumber-yogurt-salad'];
   const macros = [
-    meal.nutrition.protein ? `${meal.nutrition.protein}g ${t('protein')}` : null,
-    meal.nutrition.carbs ? `${meal.nutrition.carbs}g ${t('carbs')}` : null,
-    meal.nutrition.fat ? `${meal.nutrition.fat}g ${t('fat')}` : null,
+    meal.nutrition.protein ? `${meal.nutrition.protein}g ${'protein'}` : null,
+    meal.nutrition.carbs ? `${meal.nutrition.carbs}g ${'carbs'}` : null,
+    meal.nutrition.fat ? `${meal.nutrition.fat}g ${'fat'}` : null,
   ].filter(Boolean);
 
   return (
@@ -540,30 +511,30 @@ function MealCard({ language, meal }: MealCardProps) {
       <View style={styles.mealContent}>
         <View style={styles.mealTitleBlock}>
           <Text style={styles.mealName}>{meal.name}</Text>
-          <Text style={styles.mealMeta}>{`${meal.cuisine} • ${categoryLabels[language][meal.category]}`}</Text>
+          <Text style={styles.mealMeta}>{`${meal.cuisine} • ${categoryLabels[meal.category]}`}</Text>
           <Text style={styles.mealIngredientLine} numberOfLines={2}>
-            <Text style={styles.mealIngredientLabel}>{t('matchingIngredients')}: </Text>
+            <Text style={styles.mealIngredientLabel}>{'Matching ingredients'}: </Text>
             {meal.ingredientsUsed.length > 0 ? meal.ingredientsUsed.join(', ') : '—'}
           </Text>
           <Text style={styles.mealIngredientLine} numberOfLines={2}>
-            <Text style={styles.mealIngredientLabel}>{t('missingIngredients')}: </Text>
+            <Text style={styles.mealIngredientLabel}>{'Missing ingredients'}: </Text>
             {meal.missingOptionalIngredients.length > 0 ? meal.missingOptionalIngredients.join(', ') : '—'}
           </Text>
         </View>
 
         <View style={styles.mealImageWrap}>
           <Image source={{ uri: mealImageUri }} style={styles.mealImage} />
-          <TouchableOpacity accessibilityLabel={t('saveMeal')} accessibilityRole="button" onPress={() => undefined} style={styles.saveMealButton}>
+          <TouchableOpacity accessibilityLabel={'Save meal'} accessibilityRole="button" onPress={() => undefined} style={styles.saveMealButton}>
             <Text style={styles.saveMealButtonText}>＋</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <InfoLine label={t('used')} value={meal.ingredientsUsed.length > 0 ? meal.ingredientsUsed.join(', ') : '—'} />
-      <InfoLine label={t('optionalMissing')} value={meal.missingOptionalIngredients.join(', ')} />
-      <InfoLine label={t('nutrition')} value={`${meal.nutrition.calories} ${t('calories')}${macros.length > 0 ? ` • ${macros.join(' • ')}` : ''}`} />
+      <InfoLine label={'Uses'} value={meal.ingredientsUsed.length > 0 ? meal.ingredientsUsed.join(', ') : '—'} />
+      <InfoLine label={'Optional extras'} value={meal.missingOptionalIngredients.join(', ')} />
+      <InfoLine label={'Nutrition'} value={`${meal.nutrition.calories} ${'cal'}${macros.length > 0 ? ` • ${macros.join(' • ')}` : ''}`} />
 
-      <Text style={styles.stepsTitle}>{t('steps')}</Text>
+      <Text style={styles.stepsTitle}>{'Simple steps'}</Text>
       {meal.steps.map((step, index) => (
         <Text key={step} style={styles.stepText}>{`${index + 1}. ${step}`}</Text>
       ))}
@@ -610,58 +581,25 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   eyebrow: {
-    color: '#F97316',
+    color: '#1F2933',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.2,
     marginBottom: 4,
     textTransform: 'uppercase',
   },
-  title: {
-    color: '#064E3B',
+  appTitle: {
+    color: '#1F2933',
     fontSize: 24,
     fontWeight: '700',
   },
   appSubtitle: {
-    color: '#475569',
+    color: '#1F2933',
     fontSize: 12,
     fontWeight: '700',
     lineHeight: 17,
     marginTop: 3,
     maxWidth: 230,
-  },
-  appSubtitle: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-    marginTop: 3,
-    maxWidth: 230,
-  },
-  languageMenu: {
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    padding: 4,
-  },
-  languageChip: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-  },
-  languageChipActive: {
-    backgroundColor: '#047857',
-  },
-  languageText: {
-    color: '#047857',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  languageTextActive: {
-    color: '#FFFFFF',
   },
   stepTabs: {
     backgroundColor: '#FFFFFF',
@@ -681,12 +619,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#D1FAE5',
   },
   stepTabText: {
-    color: '#64748B',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '700',
   },
   stepTabTextActive: {
-    color: '#047857',
+    color: '#1F2933',
   },
   disabledTab: {
     opacity: 0.5,
@@ -706,13 +644,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   screenTitle: {
-    color: '#0F172A',
+    color: '#1F2933',
     fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.4,
   },
   screenSubtitle: {
-    color: '#64748B',
+    color: '#1F2933',
     fontSize: 15,
     lineHeight: 22,
     marginTop: 8,
@@ -745,7 +683,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   photoCountText: {
-    color: '#475569',
+    color: '#1F2933',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -769,7 +707,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   photoLabel: {
-    color: '#334155',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '700',
     marginTop: 8,
@@ -790,12 +728,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
   },
   miniButtonText: {
-    color: '#0369A1',
+    color: '#1F2933',
     fontSize: 11,
     fontWeight: '700',
   },
   miniButtonTextDestructive: {
-    color: '#B91C1C',
+    color: '#1F2933',
   },
   primaryCta: {
     alignItems: 'center',
@@ -818,7 +756,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   secondaryCtaText: {
-    color: '#334155',
+    color: '#1F2933',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -841,7 +779,7 @@ const styles = StyleSheet.create({
     borderColor: '#D1FAE5',
     borderRadius: 16,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#1F2933',
     flex: 1,
     fontSize: 15,
     paddingHorizontal: 14,
@@ -868,13 +806,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyIngredientsTitle: {
-    color: '#0F172A',
+    color: '#1F2933',
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 6,
   },
   emptyIngredientsText: {
-    color: '#64748B',
+    color: '#1F2933',
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
@@ -894,14 +832,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   ingredientInput: {
-    color: '#064E3B',
+    color: '#1F2933',
     flex: 1,
     fontSize: 15,
     fontWeight: '700',
     paddingVertical: 6,
   },
   confidenceText: {
-    color: '#047857',
+    color: '#1F2933',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -914,7 +852,7 @@ const styles = StyleSheet.create({
     width: 26,
   },
   removeButtonText: {
-    color: '#065F46',
+    color: '#1F2933',
     fontSize: 20,
     fontWeight: '700',
     lineHeight: 22,
@@ -935,7 +873,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   restartButtonText: {
-    color: '#C2410C',
+    color: '#1F2933',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -953,7 +891,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#047857',
   },
   categoryTabText: {
-    color: '#475569',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -982,26 +920,26 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   mealName: {
-    color: '#0F172A',
+    color: '#1F2933',
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 23,
   },
   mealMeta: {
-    color: '#047857',
+    color: '#1F2933',
     fontSize: 12,
     fontWeight: '900',
     marginTop: 4,
   },
   mealIngredientLine: {
-    color: '#475569',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
     marginTop: 7,
   },
   mealIngredientLabel: {
-    color: '#0F172A',
+    color: '#1F2933',
     fontWeight: '900',
   },
   mealImageWrap: {
@@ -1028,13 +966,13 @@ const styles = StyleSheet.create({
     width: 30,
   },
   saveMealButtonText: {
-    color: '#047857',
+    color: '#1F2933',
     fontSize: 19,
     fontWeight: '900',
     lineHeight: 22,
   },
   mealDescription: {
-    color: '#64748B',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '700',
     marginTop: 4,
@@ -1051,7 +989,7 @@ const styles = StyleSheet.create({
     width: 38,
   },
   timeBadgeText: {
-    color: '#047857',
+    color: '#1F2933',
     fontSize: 12,
     fontWeight: '900',
   },
@@ -1059,26 +997,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: '#0F172A',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '900',
   },
   infoValue: {
-    color: '#475569',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
     marginTop: 2,
   },
   stepsTitle: {
-    color: '#0F172A',
+    color: '#1F2933',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 8,
     marginBottom: 6,
   },
   stepText: {
-    color: '#475569',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 20,
@@ -1099,18 +1037,18 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   mealStatValue: {
-    color: '#064E3B',
+    color: '#1F2933',
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 2,
   },
   mealStatLabel: {
-    color: '#047857',
+    color: '#1F2933',
     fontSize: 12,
     fontWeight: '700',
   },
   emptyText: {
-    color: '#64748B',
+    color: '#1F2933',
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 22,
@@ -1120,7 +1058,7 @@ const styles = StyleSheet.create({
   errorText: {
     backgroundColor: '#FEF2F2',
     borderRadius: 16,
-    color: '#B91C1C',
+    color: '#1F2933',
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
@@ -1152,7 +1090,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   loadingText: {
-    color: '#047857',
+    color: '#1F2933',
     fontSize: 16,
     fontWeight: '900',
   },
