@@ -10,15 +10,14 @@ The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refr
   - Photo capture/upload and photo cleanup
   - Ingredient review and manual edits
   - Meal recommendations
-- Top-right language selector with English as the default and a compact English/中文 menu.
+- Top-right language selector with English as the default language.
 - Multiple photo selection through `expo-image-picker`.
-- Per-photo controls to crop, rotate, or delete images before analysis.
 - OpenAI Vision-powered refrigerator image analysis when `EXPO_PUBLIC_OPENAI_API_KEY` is available.
 - Local mock refrigerator image analysis fallback when no API key is configured.
 - Editable ingredient confirmation step before meal generation.
 - Meal recommendations browsed with category tabs for vegetables, meats, staples, snacks, and drinks.
 - Per-meal cuisine, ingredients used, missing optional ingredients, estimated calories, macros, cooking time, and simple cooking steps.
-- Localized English and Chinese labels for the redesigned flow and meal suggestions.
+- Fully localized English, Chinese, and French labels for the redesigned flow and meal suggestions.
 - Loading states for scanning the refrigerator and generating meal ideas.
 
 ## AI/API architecture
@@ -26,7 +25,7 @@ The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refr
 The AI service exposes clearly named functions for image recognition and meal planning:
 
 - `detectIngredientsFromImages(images)` — sends selected image data to the OpenAI Responses API with a vision-capable model and requests structured ingredient JSON. Without an API key, it uses the local mock detector.
-- `recommendMealsFromIngredients(ingredients, language)` — local rule-based meal ideas that can later be replaced or augmented with OpenAI text generation. Ingredient names are canonicalized across supported languages before matching so Chinese inputs still map to the same recipe logic.
+- `recommendMealsFromIngredients(ingredients, language)` — local rule-based meal ideas that can later be replaced or augmented with OpenAI text generation.
 - `estimateNutrition(meal)` — placeholder for more precise nutrition estimation.
 
 ### OpenAI setup

@@ -378,7 +378,7 @@ function normalizeOpenAIIngredients(response: OpenAIIngredientResponse): Ingredi
 
   return (response.ingredients ?? [])
     .map((ingredient) => {
-      const name = typeof ingredient.name === 'string' ? canonicalizeIngredientName(ingredient.name) : '';
+      const name = typeof ingredient.name === 'string' ? ingredient.name.trim().toLowerCase() : '';
       const quantity = typeof ingredient.quantity === 'string' ? ingredient.quantity.trim() : undefined;
       const confidence = typeof ingredient.confidence === 'number' ? Math.min(Math.max(ingredient.confidence, 0), 1) : 0.5;
 

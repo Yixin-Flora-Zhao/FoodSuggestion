@@ -30,21 +30,12 @@ import {
 } from './src/services/ai';
 
 const categoryOrder: MealCategory[] = ['vegetables', 'meats', 'staples', 'snacks', 'drinks'];
-type AppLanguage = 'en' | 'zh';
-const languages: AppLanguage[] = ['en', 'zh'];
-const mealImageUris: Record<string, string> = {
-  'spinach-mushroom-omelet': 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=320&q=80',
-  'chicken-fried-rice': 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=320&q=80',
-  'mapo-style-tofu': 'https://images.unsplash.com/photo-1604909052743-94e838986d24?auto=format&fit=crop&w=320&q=80',
-  'tomato-cucumber-yogurt-salad': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=320&q=80',
-  'apple-yogurt-smoothie': 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=320&q=80',
-};
+const languages: Language[] = ['en', 'zh', 'fr'];
 type AppScreen = 'photos' | 'ingredients' | 'meals';
 type MealTab = 'all' | MealCategory;
 
 export default function App() {
-  const [language, setLanguage] = useState<AppLanguage>('en');
-  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+  const [language, setLanguage] = useState<Language>('en');
   const [screen, setScreen] = useState<AppScreen>('photos');
   const [images, setImages] = useState<FridgeImage[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -237,11 +228,6 @@ export default function App() {
     }
   }
 
-  function selectLanguage(selectedLanguage: AppLanguage) {
-    setLanguage(selectedLanguage);
-    setIsLanguageMenuOpen(false);
-  }
-
   function startOver() {
     setImages([]);
     setIngredients([]);
@@ -256,29 +242,21 @@ export default function App() {
       <StatusBar style="dark" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardView}>
         <View style={styles.appHeader}>
-          <View style={styles.titleBlock}>
+          <View>
             <Text style={styles.eyebrow}>{t.eyebrow}</Text>
             <Text style={styles.appTitle}>{t.appName}</Text>
-            <Text style={styles.appSubtitle}>{t.subtitle}</Text>
           </View>
-          <View style={styles.languageSelectorWrap}>
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => setIsLanguageMenuOpen((isOpen) => !isOpen)}
-              style={styles.languageButton}
-            >
-              <Text style={styles.languageButtonText}>{languageLabels[language]}</Text>
-              <Text style={styles.languageChevron}>{isLanguageMenuOpen ? '▲' : '▼'}</Text>
-            </TouchableOpacity>
-            {isLanguageMenuOpen && (
-              <View style={styles.languageDropdown}>
-                {languages.map((item) => (
-                  <TouchableOpacity accessibilityRole="button" key={item} onPress={() => selectLanguage(item)} style={styles.languageOption}>
-                    <Text style={[styles.languageOptionText, language === item && styles.languageOptionTextActive]}>{languageLabels[item]}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+          <View style={styles.languageMenu}>
+            {languages.map((item) => (
+              <TouchableOpacity
+                accessibilityRole="button"
+                key={item}
+                onPress={() => setLanguage(item)}
+                style={[styles.languageChip, language === item && styles.languageChipActive]}
+              >
+                <Text style={[styles.languageText, language === item && styles.languageTextActive]}>{languageLabels[item]}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -556,16 +534,14 @@ function MealCard({ language, meal }: MealCardProps) {
         </View>
       </View>
 
-      <View style={styles.mealStatsRow}>
-        <View style={styles.mealStatPill}>
-          <Text style={styles.mealStatValue}>{meal.nutrition.calories}</Text>
-          <Text style={styles.mealStatLabel}>{t.calories}</Text>
-        </View>
-        <View style={styles.mealStatPill}>
-          <Text style={styles.mealStatValue}>{meal.cookingTime}</Text>
-          <Text style={styles.mealStatLabel}>{t.prepTime}</Text>
-        </View>
-      </View>
+      <InfoLine label={t.used} value={meal.ingredientsUsed.length > 0 ? meal.ingredientsUsed.join(', ') : '—'} />
+      <InfoLine label={t.optionalMissing} value={meal.missingOptionalIngredients.join(', ')} />
+      <InfoLine label={t.nutrition} value={`${meal.nutrition.calories} ${t.calories}${macros.length > 0 ? ` • ${macros.join(' • ')}` : ''}`} />
+
+      <Text style={styles.stepsTitle}>{t.steps}</Text>
+      {meal.steps.map((step, index) => (
+        <Text key={step} style={styles.stepText}>{`${index + 1}. ${step}`}</Text>
+      ))}
     </View>
   );
 }
@@ -602,8 +578,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 12,
-    zIndex: 20,
-    elevation: 20,
   },
   eyebrow: {
     color: '#F97316',
@@ -613,75 +587,34 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textTransform: 'uppercase',
   },
-  titleBlock: {
-    flex: 1,
-    paddingRight: 12,
-  },
   appTitle: {
     color: '#064E3B',
     fontSize: 24,
     fontWeight: '900',
   },
-  appSubtitle: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-    marginTop: 4,
-  },
-  languageSelectorWrap: {
-    alignItems: 'flex-end',
-    position: 'relative',
-    zIndex: 10,
-  },
-  languageButton: {
+  languageMenu: {
     alignItems: 'center',
     backgroundColor: '#ECFDF5',
-    borderColor: '#BBF7D0',
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    gap: 4,
+    padding: 4,
   },
-  languageButtonText: {
+  languageChip: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+  },
+  languageChipActive: {
+    backgroundColor: '#047857',
+  },
+  languageText: {
     color: '#047857',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  languageChevron: {
-    color: '#047857',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  languageDropdown: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#D1FAE5',
-    borderRadius: 16,
-    borderWidth: 1,
-    minWidth: 118,
-    padding: 6,
-    position: 'absolute',
-    right: 0,
-    top: 42,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    elevation: 8,
-  },
-  languageOption: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-  },
-  languageOptionText: {
-    color: '#475569',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '800',
   },
-  languageOptionTextActive: {
+  stepTabTextActive: {
     color: '#047857',
   },
   stepTabs: {
@@ -989,38 +922,13 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   mealMeta: {
-    color: '#047857',
-    fontSize: 12,
-    fontWeight: '900',
-    marginTop: 5,
-    marginBottom: 8,
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 4,
   },
-  mealIngredientLine: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-    marginBottom: 5,
-  },
-  mealIngredientLabel: {
-    color: '#064E3B',
-    fontWeight: '900',
-  },
-  mealImageWrap: {
-    height: 112,
-    position: 'relative',
-    width: 112,
-  },
-  mealImage: {
+  timeBadge: {
     backgroundColor: '#D1FAE5',
-    borderRadius: 22,
-    height: 112,
-    width: 112,
-  },
-  saveMealButton: {
-    alignItems: 'center',
-    backgroundColor: '#F97316',
-    borderColor: '#FFFFFF',
     borderRadius: 999,
     borderWidth: 3,
     bottom: -8,
@@ -1030,29 +938,9 @@ const styles = StyleSheet.create({
     right: -8,
     width: 38,
   },
-  saveMealButtonText: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '900',
-    lineHeight: 25,
-  },
-  mealStatsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 14,
-  },
-  mealStatPill: {
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    borderRadius: 999,
-    flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-  },
-  mealStatValue: {
-    color: '#064E3B',
-    fontSize: 13,
+  timeBadgeText: {
+    color: '#047857',
+    fontSize: 12,
     fontWeight: '900',
   },
   mealStatLabel: {
