@@ -125,5 +125,7 @@ export const translations = {
 export type TranslationKey = keyof typeof translations.en;
 
 export function getTranslation(language: AppLanguage, key: TranslationKey): string {
-  return translations[language][key] ?? translations.en[key];
+  return translations[language]?.[key]
+    ?? translations.en?.[key]
+    ?? key;
 }
