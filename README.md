@@ -1,32 +1,51 @@
 # FridgeChef AI Food Suggestion
 
-FridgeChef AI is an Expo React Native prototype that helps users turn refrigerator contents into realistic meal ideas. Users can take or upload multiple fridge photos, review mock AI-detected ingredients with confidence labels, add or edit ingredients manually, and generate meal recommendations across Western, Chinese, and international cuisines.
+FridgeChef AI is an Expo React Native prototype that helps users turn refrigerator contents into realistic meal ideas. Users can take or upload multiple fridge photos, review AI-detected ingredients with confidence labels, add or edit ingredients manually, and generate meal recommendations across Western, Chinese, and international cuisines.
 
-The app is designed for Expo Go SDK 54 and currently runs without any API keys. AI behavior is implemented locally in `src/services/ai.ts` so the service layer can later be replaced with OpenAI Vision and text generation calls.
+The app is designed for Expo Go SDK 54. If no OpenAI API key is configured, refrigerator photo analysis and meal suggestions fall back to local development data so the rest of the app remains usable.
 
 ## Features
 
-- Home screen with three primary actions:
-  - Take refrigerator photos
-  - Upload refrigerator photos
-  - Add food manually
+- Three-step mobile flow instead of one long page:
+  - Photo capture/upload and photo cleanup
+  - Ingredient review and manual edits
+  - Meal recommendations
+- Top-right language selector with English as the default and a compact English/中文 menu.
 - Multiple photo selection through `expo-image-picker`.
-- Mock refrigerator image analysis with detected ingredients, quantities, and confidence labels.
+- Per-photo controls to crop, rotate, or delete images before analysis.
+- OpenAI Vision-powered refrigerator image analysis when `EXPO_PUBLIC_OPENAI_API_KEY` is available.
+- Local mock refrigerator image analysis fallback when no API key is configured.
 - Editable ingredient confirmation step before meal generation.
-- Meal recommendations grouped into vegetables, meats, main food / staples, snacks, and drinks.
-- Per-meal cuisine, ingredients used, missing optional ingredients, estimated calories, macros, cooking time, and simple cooking steps.
-- Language selector for English, Chinese, and French app labels and meal suggestions.
+- GPT meal recommendations browsed with cuisine tabs for Chinese, Western, Japanese, Korean, and other meals.
+- Text-only meal cards with cuisine, matched ingredients, missing ingredients, match score, calories, and prep time.
+- Localized English and Chinese labels for the redesigned flow and meal suggestions.
 - Loading states for scanning the refrigerator and generating meal ideas.
 
 ## AI/API architecture
 
-The mock AI service exposes clearly named functions that are ready to be swapped for real API implementations:
+The AI service exposes clearly named functions for image recognition and meal planning:
 
-- `detectIngredientsFromImages(images)` — placeholder for OpenAI Vision-based fridge image recognition.
-- `recommendMealsFromIngredients(ingredients, language)` — placeholder for OpenAI text generation of localized meal ideas.
-- `estimateNutrition(meal)` — placeholder for more precise nutrition estimation.
+- `detectIngredientsFromImages(images)` — sends selected image data to the OpenAI Responses API with a vision-capable model and requests structured ingredient JSON. Without an API key, it uses the local mock detector.
+- `generateMealSuggestions({ ingredients, language })` — sends up to 10 confirmed ingredients to the OpenAI Responses API using `gpt-5-mini`, with `gpt-4.1-mini` fallback, and returns structured JSON meal suggestions. If no API key is configured, it returns local development suggestions.
+- `src/locales/translations.ts` — lightweight English/Chinese translation table used by the app-level `t(key)` helper.
+- `src/services/languageStorage.ts` — AsyncStorage-style language persistence adapter for the selected app language.
 
-Integration comments in `src/services/ai.ts` identify where to connect OpenAI Vision and text generation requests later.
+### OpenAI setup
+
+Set your OpenAI key in your local shell before starting Expo:
+
+```sh
+export EXPO_PUBLIC_OPENAI_API_KEY="your_openai_api_key"
+npm start
+```
+
+Optionally override the photo vision model:
+
+```sh
+export EXPO_PUBLIC_OPENAI_VISION_MODEL="gpt-4.1-mini"
+```
+
+> Security note: `EXPO_PUBLIC_` variables are bundled into client-side Expo apps. This is acceptable only for local prototypes. For production, proxy OpenAI requests through your own backend and keep the API key server-side.
 
 ## Run locally
 
