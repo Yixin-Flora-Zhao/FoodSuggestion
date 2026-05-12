@@ -124,6 +124,9 @@ export const translations = {
 
 export type TranslationKey = keyof typeof translations.en;
 
-export function getTranslation(language: AppLanguage, key: TranslationKey): string {
-  return translations[language][key] ?? translations.en[key];
+const translationLookup = translations as Record<string, Record<string, unknown>>;
+
+export function getTranslation(language: AppLanguage, key: string): string {
+  const value = translationLookup[language]?.[key] ?? translationLookup.en?.[key] ?? key;
+  return typeof value === 'string' ? value : key;
 }
